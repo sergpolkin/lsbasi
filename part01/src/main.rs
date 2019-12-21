@@ -20,6 +20,29 @@ impl Interpreter {
             cur_token: None,
         }
     }
+
+    fn parse_integer(&mut self) -> Option<i32> {
+        let text: Vec<char> = self.text.chars().collect();
+        let mut store: Vec<char> = Vec::new();
+        loop {
+            if self.pos > self.text.len() - 1 {
+                let res: String = store.into_iter().collect();
+                return res.parse().ok();
+            }
+
+            let c = text[self.pos];
+            if c.is_digit(10) {
+                store.push(c);
+                self.pos += 1;
+                continue;
+            }
+            else {
+                let res: String = store.into_iter().collect();
+                return res.parse().ok();
+            }
+        }
+    }
+
     fn get_next_token(&mut self) -> Option<Token> {
         let text: Vec<char> = self.text.chars().collect();
 
@@ -28,28 +51,30 @@ impl Interpreter {
         }
 
         let c = text[self.pos];
-        self.pos += 1;
 
         if c.is_digit(10) {
-            let n: i32 = c.to_digit(10).unwrap() as i32;
-            return Some(Token::Integer(n));
+            let num = self.parse_integer().unwrap();
+            return Some(Token::Integer(num));
         }
 
         if c == '+' {
+            self.pos += 1;
             return Some(Token::Plus);
         }
 
-        if let Some(_) = String::from("\r\n").find(c) {
+        if String::from("\r\n").find(c).is_some() {
+            self.pos += 1;
             return Some(Token::EOF);
         }
 
         None
     }
+
     fn exec(&mut self) -> i32 {
         self.cur_token = self.get_next_token();
         let left = match self.cur_token {
             Some(Token::Integer(n)) => n,
-            _ => panic!("Expect single-digit integer")
+            _ => panic!("Expect integer")
         };
 
         self.cur_token = self.get_next_token();
@@ -61,7 +86,7 @@ impl Interpreter {
         self.cur_token = self.get_next_token();
         let right = match self.cur_token {
             Some(Token::Integer(n)) => n,
-            _ => panic!("Expect single-digit integer")
+            _ => panic!("Expect integer")
         };
 
         self.cur_token = self.get_next_token();
