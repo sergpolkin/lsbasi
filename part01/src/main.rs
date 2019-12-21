@@ -70,30 +70,39 @@ impl Interpreter {
         None
     }
 
+    fn unwrap_integer(&self) -> i32 {
+        match self.cur_token {
+            Some(Token::Integer(n)) => n,
+            _ => panic!("Expect integer at {}", self.pos)
+        }
+    }
+
+    fn unwrap_plus(&self) {
+        match self.cur_token {
+            Some(Token::Plus) => (),
+            _ => panic!("Expect `+` token at {}", self.pos)
+        }
+    }
+
+    fn unwrap_eof(&self) {
+        match self.cur_token {
+            Some(Token::EOF) => (),
+            _ => panic!("Expect EOF token at {}", self.pos)
+        }
+    }
+
     fn exec(&mut self) -> i32 {
         self.cur_token = self.get_next_token();
-        let left = match self.cur_token {
-            Some(Token::Integer(n)) => n,
-            _ => panic!("Expect integer")
-        };
+        let left = self.unwrap_integer();
 
         self.cur_token = self.get_next_token();
-        let _op = match self.cur_token {
-            Some(Token::Plus) => Token::Plus,
-            _ => panic!("Expect `+` token")
-        };
+        let _op = self.unwrap_plus();
 
         self.cur_token = self.get_next_token();
-        let right = match self.cur_token {
-            Some(Token::Integer(n)) => n,
-            _ => panic!("Expect integer")
-        };
+        let right = self.unwrap_integer();
 
         self.cur_token = self.get_next_token();
-        match self.cur_token {
-            Some(Token::EOF) => {}
-            _ => panic!("Expect EOF token")
-        };
+        self.unwrap_eof();
 
         left + right
     }
