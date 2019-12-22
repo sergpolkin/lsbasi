@@ -46,28 +46,34 @@ impl Interpreter {
     fn get_next_token(&mut self) -> Option<Token> {
         let text: Vec<char> = self.text.chars().collect();
 
-        if self.pos > self.text.len() - 1 {
-            return Some(Token::EOF);
+        loop {
+            if self.pos > self.text.len() - 1 {
+                return Some(Token::EOF);
+            }
+
+            let c = text[self.pos];
+
+            if c.is_whitespace() {
+                self.pos += 1;
+                continue;
+            }
+
+            if c.is_digit(10) {
+                let num = self.parse_integer().unwrap();
+                return Some(Token::Integer(num));
+            }
+
+            if c == '+' {
+                self.pos += 1;
+                return Some(Token::Plus);
+            }
+
+            if String::from("\r\n").find(c).is_some() {
+                self.pos += 1;
+                return Some(Token::EOF);
+            }
+
         }
-
-        let c = text[self.pos];
-
-        if c.is_digit(10) {
-            let num = self.parse_integer().unwrap();
-            return Some(Token::Integer(num));
-        }
-
-        if c == '+' {
-            self.pos += 1;
-            return Some(Token::Plus);
-        }
-
-        if String::from("\r\n").find(c).is_some() {
-            self.pos += 1;
-            return Some(Token::EOF);
-        }
-
-        None
     }
 
     fn unwrap_integer(&self) -> i32 {
