@@ -124,6 +124,15 @@ impl Interpreter {
     }
 }
 
+#[test]
+fn interpreter_tests() {
+    assert_eq!(Interpreter::new("3+5").exec(), 8);
+    assert_eq!(Interpreter::new("12+3").exec(), 15);
+    assert_eq!(Interpreter::new(" 12+3").exec(), 15);
+    assert_eq!(Interpreter::new("7 - 5").exec(), 2);
+    assert_eq!(Interpreter::new("5 - 7").exec(), -2);
+}
+
 fn main() {
     let mut text = String::new();
     loop {
