@@ -14,43 +14,47 @@ impl Interpreter {
         }
     }
 
-    fn unwrap_integer(&self) -> i32 {
+    fn integer(&mut self) -> i32 {
+        self.cur_token = self.lexer.get_next_token();
         match self.cur_token {
             Some(Token::Integer(n)) => n,
             _ => panic!("Expect integer at {}", self.lexer.pos)
         }
     }
 
-    fn unwrap_op(&self) -> ArithmeticOp {
+    fn op(&mut self) -> Option<ArithmeticOp> {
+        self.cur_token = self.lexer.get_next_token();
         match self.cur_token {
-            Some(Token::Op(op)) => op,
+            Some(Token::Op(op)) => Some(op),
+            Some(Token::EOF) | None => None,
             _ => panic!("Expect arithmetic operator at {}", self.lexer.pos)
         }
     }
 
     fn term(&mut self) -> i32 {
-        let value = self.unwrap_integer();
-        self.cur_token = self.lexer.get_next_token();
+        let mut value = self.integer();
+        loop {
+            // MUL or DIV
+            value = match self.op() {
+                Some(ArithmeticOp::Mul) => value * self.integer(),
+                Some(ArithmeticOp::Div) => value / self.integer(),
+                _ => break,
+            };
+        }
         value
     }
 
     pub fn exec(&mut self) -> i32 {
-        self.cur_token = self.lexer.get_next_token();
-        let mut result = self.term();
-
+        let mut value = self.term();
         loop {
-            if self.cur_token == Some(Token::EOF) || self.cur_token == None {
-                break;
-            }
-            let op = self.unwrap_op();
-            self.cur_token = self.lexer.get_next_token();
-            result = match op {
-                ArithmeticOp::Plus  => result + self.term(),
-                ArithmeticOp::Minus => result - self.term(),
-                _ => panic!("Only `+` and `-` operation available")
+            // ADD or SUB
+            value = match self.cur_token {
+                Some(Token::Op(ArithmeticOp::Plus))  => value + self.term(),
+                Some(Token::Op(ArithmeticOp::Minus)) => value - self.term(),
+                _ => break,
             };
         }
-        result
+        value
     }
 }
 
@@ -65,4 +69,8 @@ fn interpreter_tests() {
     // from chapter 03
     assert_eq!(Interpreter::new("3").exec(), 3);
     assert_eq!(Interpreter::new("7 - 3 + 2 - 1").exec(), 5);
+    // from chapter 04
+    assert_eq!(Interpreter::new("2 + 7 * 4").exec(), 30);
+    assert_eq!(Interpreter::new("7 - 8 / 4").exec(), 5);
+    assert_eq!(Interpreter::new("14 + 2 * 3 - 6 / 2").exec(), 17);
 }
