@@ -4,6 +4,7 @@ use std::io::{self, Write};
 enum Token {
     Integer(i32),
     Plus,
+    Minus,
     EOF,
 }
 
@@ -67,6 +68,10 @@ impl Interpreter {
                 self.pos += 1;
                 return Some(Token::Plus);
             }
+            if c == '-' {
+                self.pos += 1;
+                return Some(Token::Minus);
+            }
 
             if String::from("\r\n").find(c).is_some() {
                 self.pos += 1;
@@ -83,10 +88,11 @@ impl Interpreter {
         }
     }
 
-    fn unwrap_plus(&self) {
+    fn unwrap_op(&self) -> Option<Token> {
         match self.cur_token {
-            Some(Token::Plus) => (),
-            _ => panic!("Expect `+` token at {}", self.pos)
+            Some(Token::Plus)  => Some(Token::Plus),
+            Some(Token::Minus) => Some(Token::Minus),
+            _ => panic!("Expect `+` or `-` token at {}", self.pos)
         }
     }
 
@@ -102,7 +108,7 @@ impl Interpreter {
         let left = self.unwrap_integer();
 
         self.cur_token = self.get_next_token();
-        let _op = self.unwrap_plus();
+        let op = self.unwrap_op();
 
         self.cur_token = self.get_next_token();
         let right = self.unwrap_integer();
@@ -110,7 +116,11 @@ impl Interpreter {
         self.cur_token = self.get_next_token();
         self.unwrap_eof();
 
-        left + right
+        match op {
+            Some(Token::Plus)  => left + right,
+            Some(Token::Minus) => left - right,
+            _ => unreachable!()
+        }
     }
 }
 
