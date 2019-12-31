@@ -1,6 +1,11 @@
 use crate::parser;
 use parser::*;
 
+use crate::lexer;
+use crate::ast;
+use lexer::*;
+use ast::*;
+
 pub struct Interpreter {
     parser: Parser,
 }
@@ -15,6 +20,30 @@ impl Interpreter {
     pub fn exec(&mut self) -> i32 {
         let tree = self.parser.parse();
         tree.visit()
+    }
+}
+
+trait NodeVisitor {
+    fn visit(&self) -> i32;
+}
+
+impl NodeVisitor for AST {
+    fn visit(&self) -> i32 {
+        match self.root {
+            Root::Num(n) => n,
+            Root::Op(op) => arithmetic(self, op),
+        }
+    }
+}
+
+fn arithmetic(node: &AST, op: ArithmeticOp) -> i32 {
+    let left = node.left.as_ref().unwrap();
+    let right = node.right.as_ref().unwrap();
+    match op {
+        ArithmeticOp::Plus  => left.visit() + right.visit(),
+        ArithmeticOp::Minus => left.visit() - right.visit(),
+        ArithmeticOp::Mul   => left.visit() * right.visit(),
+        ArithmeticOp::Div   => left.visit() / right.visit(),
     }
 }
 
