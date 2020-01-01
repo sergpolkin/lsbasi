@@ -5,6 +5,9 @@ mod parser;
 mod interpreter;
 use interpreter::*;
 
+#[allow(dead_code)]
+mod rpn;
+
 use std::io::{self, Write};
 
 fn main() {
