@@ -1,10 +1,6 @@
-use crate::parser;
-use parser::*;
-
-use crate::lexer;
-use crate::ast;
-use lexer::*;
-use ast::*;
+use crate::parser::*;
+use crate::lexer::*;
+use crate::ast::*;
 
 pub struct Interpreter {
     parser: Parser,

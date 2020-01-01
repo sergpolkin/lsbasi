@@ -7,6 +7,8 @@ use interpreter::*;
 
 #[allow(dead_code)]
 mod rpn;
+#[allow(dead_code)]
+mod lisp;
 
 use std::io::{self, Write};
 

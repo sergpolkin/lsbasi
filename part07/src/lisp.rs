@@ -1,7 +1,7 @@
 use crate::parser::*;
 use crate::ast::*;
 
-/// translate to postfix notation, Reverse Polish Notation
+/// LISP style notation
 
 struct Translator {
     parser: Parser,
@@ -31,7 +31,7 @@ impl NodeVisitor for AST {
             Root::Op(op) => {
                 let left = self.left.as_ref().unwrap();
                 let right = self.right.as_ref().unwrap();
-                format!("{} {} {}", left.visit(), right.visit(), op)
+                format!("({} {} {})", op, left.visit(), right.visit())
             }
         }
     }
@@ -41,10 +41,10 @@ impl NodeVisitor for AST {
 mod tests {
     use super::*;
     #[test]
-    fn rpn() {
-        assert_eq!(Translator::new("2 + 3").exec(), "2 3 +");
-        assert_eq!(Translator::new("2 + 3 * 5").exec(), "2 3 5 * +");
-        assert_eq!(Translator::new("5 + ((1 + 2) * 4) - 3").exec(), "5 1 2 + 4 * + 3 -");
-        assert_eq!(Translator::new("(5 + 3) * 12 / 3").exec(), "5 3 + 12 * 3 /");
+    fn lisp() {
+        assert_eq!(Translator::new("2 + 3").exec(), "(+ 2 3)");
+        assert_eq!(Translator::new("2 + 3 * 5").exec(), "(+ 2 (* 3 5))");
+        assert_eq!(Translator::new("7 + 5 * 2 - 3").exec(), "(- (+ 7 (* 5 2)) 3)");
+        assert_eq!(Translator::new("1 + 2 + 3 + 4 + 5").exec(), "(+ (+ (+ (+ 1 2) 3) 4) 5)");
     }
 }

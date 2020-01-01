@@ -1,5 +1,4 @@
-use crate::lexer;
-use lexer::*;
+use crate::lexer::*;
 
 /// Tree implementation
 /// [Of Boxes and Trees - Smart Pointers in Rust](https://endler.dev/2017/boxes-and-trees/)

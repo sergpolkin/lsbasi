@@ -1,3 +1,4 @@
+use std::fmt;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum ArithmeticOp {
@@ -6,6 +7,18 @@ pub enum ArithmeticOp {
     Mul,
     Div,
 }
+
+impl fmt::Display for ArithmeticOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ArithmeticOp::Plus  => write!(f, "+"),
+            ArithmeticOp::Minus => write!(f, "-"),
+            ArithmeticOp::Mul   => write!(f, "*"),
+            ArithmeticOp::Div   => write!(f, "/"),
+        }
+    }
+}
+
 
 #[derive(PartialEq)]
 pub enum Token {

@@ -1,8 +1,5 @@
-use crate::lexer;
-use lexer::*;
-
-use crate::ast;
-use ast::*;
+use crate::lexer::*;
+use crate::ast::*;
 
 pub struct Parser {
     lexer: Lexer,
