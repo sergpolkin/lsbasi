@@ -1,40 +1,46 @@
 use std::fmt;
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
+    // Numbers
     Integer(i32),
-    Op(ArithmeticOp),
+    Real(f64),
+    // Operators
+    OpPlus,   // '+'
+    OpMinus,  // '-'
+    OpMul,    // '*'
+    OpDiv,    // '/'
+    // Lexems
+    ID(String),
+    KW(Keyword),
+    // Delim
     LParen,
     RParen,
-    ID(String),
-    ASSIGN,
-    SEMI,
-    KW(Keyword),
+    ASSIGN,   // ':='
+    SEMI,     // ';'
+    COLON,    // ':'
+    COMMA,    // ','
     DOT,
     EOF,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ArithmeticOp {
-    Plus,
-    Minus,
-    Mul,
-    Div,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Keyword {
+    PROGRAM,
+    VAR,
+    INTEREG,
+    REAL,
     BEGIN,
     END,
     RESERVED,
 }
 
 const RESERVED_KEYWORDS: &[(&str, Keyword)] = &[
-    ("PROGRAM", Keyword::RESERVED),
-    ("VAR",     Keyword::RESERVED),
+    ("PROGRAM", Keyword::PROGRAM),
+    ("VAR",     Keyword::VAR),
     ("DIV",     Keyword::RESERVED),
-    ("INTEGER", Keyword::RESERVED),
-    ("REAL",    Keyword::RESERVED),
+    ("INTEGER", Keyword::INTEREG),
+    ("REAL",    Keyword::REAL),
     ("BEGIN",   Keyword::BEGIN),
     ("END",     Keyword::END),
 ];
@@ -47,7 +53,7 @@ impl Token {
                 if keyword.1 == Keyword::RESERVED {
                     panic!("Reserved keyword: {}", keyword.0);
                 }
-                return Token::KW(keyword.1);
+                return Token::KW(keyword.1.clone());
             }
         }
         Token::ID(id)
@@ -57,27 +63,27 @@ impl Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            // Numbers
             Token::Integer(n) => write!(f, "{}", n),
-            Token::Op(op) => write!(f, "{}", op),
+            Token::Real(n) => write!(f, "{}", n),
+            // Operators
+            Token::OpPlus => write!(f, "+"),
+            Token::OpMinus => write!(f, "-"),
+            Token::OpMul  => write!(f, "*"),
+            Token::OpDiv  => write!(f, "/"),
+            // Lexems
+            Token::ID(id) => write!(f, "ID \"{}\"", id),
+            Token::KW(k)  => write!(f, "{:?}", k),
+            // Delim
             Token::LParen => write!(f, "("),
             Token::RParen => write!(f, ")"),
-            Token::ID(id) => write!(f, "ID \"{}\"", id),
             Token::ASSIGN => write!(f, "ASSIGN"),
-            Token::SEMI => write!(f, "SEMI"),
-            Token::KW(k) => write!(f, "{:?}", k),
+            Token::SEMI   => write!(f, "SEMI"),
+            Token::COLON  => write!(f, "COLON"),
+            Token::COMMA  => write!(f, "COMMA"),
             Token::DOT => write!(f, "DOT"),
             Token::EOF => write!(f, "EOF"),
         }
     }
 }
 
-impl fmt::Display for ArithmeticOp {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ArithmeticOp::Plus  => write!(f, "+"),
-            ArithmeticOp::Minus => write!(f, "-"),
-            ArithmeticOp::Mul   => write!(f, "*"),
-            ArithmeticOp::Div   => write!(f, "/"),
-        }
-    }
-}

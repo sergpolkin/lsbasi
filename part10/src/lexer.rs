@@ -43,10 +43,10 @@ impl Lexer {
         }
     }
 
-    fn parse_integer(&mut self) -> Option<i32> {
+    fn parse_number(&mut self) -> Option<Token> {
         let mut res = String::new();
         while let Some(c) = self.get_char() {
-            if c.is_digit(10) {
+            if c.is_digit(10) || c == '.' {
                 res.push(c);
                 self.pos += 1;
                 continue;
@@ -55,7 +55,18 @@ impl Lexer {
                 break;
             }
         }
-        res.parse().ok()
+        if res.contains('.') {
+            match res.parse() {
+                Ok(n) => Some(Token::Real(n)),
+                _ => None,
+            }
+        }
+        else {
+            match res.parse() {
+                Ok(n) => Some(Token::Integer(n)),
+                _ => None,
+            }
+        }
     }
 
     fn parse_id(&mut self) -> String {
@@ -89,14 +100,23 @@ impl Lexer {
             }
 
             if c.is_digit(10) {
-                let num = self.parse_integer().unwrap();
-                return Some(Token::Integer(num));
+                return self.parse_number();
             }
 
             if (c == ':') & (self.peek() == Some('=')) {
                 self.pos += 1;
                 self.pos += 1;
                 return Some(Token::ASSIGN);
+            }
+
+            if (c == ':') {
+                self.pos += 1;
+                return Some(Token::COLON);
+            }
+
+            if c == ',' {
+                self.pos += 1;
+                return Some(Token::COMMA);
             }
 
             if c == ';' {
@@ -106,19 +126,19 @@ impl Lexer {
 
             if c == '+' {
                 self.pos += 1;
-                return Some(Token::Op(ArithmeticOp::Plus));
+                return Some(Token::OpPlus);
             }
             if c == '-' {
                 self.pos += 1;
-                return Some(Token::Op(ArithmeticOp::Minus));
+                return Some(Token::OpMinus);
             }
             if c == '*' {
                 self.pos += 1;
-                return Some(Token::Op(ArithmeticOp::Mul));
+                return Some(Token::OpMul);
             }
             if c == '/' {
                 self.pos += 1;
-                return Some(Token::Op(ArithmeticOp::Div));
+                return Some(Token::OpDiv);
             }
 
             if c == '(' {

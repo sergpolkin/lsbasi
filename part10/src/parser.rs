@@ -18,7 +18,7 @@ impl Parser {
     }
 
     fn eat(&mut self, tok: Token) {
-        println!("{}", tok);
+        // println!("{}", tok);
         match self.cur_token {
             Some(ref cur) if (*cur == tok) => {},
             Some(ref cur) => panic!("Expect {}, got {}", tok, cur),
@@ -27,23 +27,83 @@ impl Parser {
         self.cur_token = self.lexer.get_next_token();
     }
 
+    fn eat_any(&mut self) {
+        // println!("${}", self.cur_token.as_ref().unwrap());
+        if self.cur_token.is_some() {
+            self.cur_token = self.lexer.get_next_token();
+        }
+        else {
+            panic!("Expect any token, got None");
+        }
+    }
+
     fn variable(&mut self) -> AST {
         let name = match self.cur_token {
             Some(Token::ID(ref name)) => name.to_string(),
             _ => unreachable!()
         };
         self.eat(Token::ID(name.to_string()));
-        AST::new(Root::Var(name))
+        let var = Root::VarID { name, value: VariableValue::None };
+        AST::new(var)
     }
 
-    /// program : compound_statement DOT
+    /// program : PROGRAM variable SEMI block DOT
     fn program(&mut self) -> AST {
-        let mut node = self.compound_statement();
+        if self.cur_token == Some(Token::KW(Keyword::PROGRAM)) {
+            self.eat(Token::KW(Keyword::PROGRAM));
+            let _prog_name = self.variable();
+            self.eat(Token::SEMI);
+        }
+        let block_node = self.block();
         self.eat(Token::DOT);
-        node
+        block_node
     }
 
-    /// compound_statement: BEGIN statement_list END
+    /// block : declarations compound_statement
+    fn block(&mut self) -> AST {
+        let decl_node = self.declarations();
+        let comp_node = self.compound_statement();
+        AST::new(Root::Compound)
+            .left(decl_node)
+            .right(comp_node)
+    }
+
+    /// declarations : VAR variable_declarations | empty
+    fn declarations(&mut self) -> AST {
+        if self.cur_token == Some(Token::KW(Keyword::VAR)) {
+            self.eat(Token::KW(Keyword::VAR));
+            self.variable_declaration()
+        }
+        else {
+            self.empty()
+        }
+    }
+
+    /// variable_declaration : ID (COMMA ID)* COLON type_spec
+    fn variable_declaration(&mut self) -> AST {
+        let node = AST::new(Root::VarDecl)
+            .left(self.variable());
+        match self.cur_token {
+            Some(Token::COMMA) => {
+                self.eat(Token::COMMA);
+                node.right(self.variable_declaration())
+            },
+            Some(Token::COLON) => {
+                self.eat(Token::COLON);
+                self.eat_any(); // eat type_spec
+                self.eat(Token::SEMI);
+                if let Some(Token::ID(ref _id)) = self.cur_token {
+                    node.right(self.variable_declaration())
+                }
+                else {
+                    node.right(self.empty())
+                }
+            },
+            _ => panic!("Error at variable_declaration: {}", self.lexer.pos)
+        }
+    }
+
+    /// compound_statement : BEGIN statement_list END
     fn compound_statement(&mut self) -> AST {
         self.eat(Token::KW(Keyword::BEGIN));
         let node = self.statement_list();
@@ -95,10 +155,10 @@ impl Parser {
     fn expr(&mut self) -> AST {
         let mut node = self.term();
         loop {
-            node = match self.cur_token {
-                Some(Token::Op(op @ ArithmeticOp::Plus)) |
-                Some(Token::Op(op @ ArithmeticOp::Minus)) => {
-                    self.eat(Token::Op(op));
+            node = match self.cur_token.clone() {
+                Some(op @ Token::OpPlus) |
+                Some(op @ Token::OpMinus) => {
+                    self.eat(op.clone());
                     AST::new(Root::BinOp(op))
                         .left(node)
                         .right(self.term())
@@ -113,10 +173,10 @@ impl Parser {
     fn term(&mut self) -> AST {
         let mut node = self.factor();
         loop {
-            node = match self.cur_token {
-                Some(Token::Op(op @ ArithmeticOp::Mul)) |
-                Some(Token::Op(op @ ArithmeticOp::Div)) => {
-                    self.eat(Token::Op(op));
+            node = match self.cur_token.clone() {
+                Some(op @ Token::OpMul) |
+                Some(op @ Token::OpDiv) => {
+                    self.eat(op.clone());
                     AST::new(Root::BinOp(op))
                         .left(node)
                         .right(self.factor())
@@ -133,14 +193,19 @@ impl Parser {
     ///        | LPAREN expr RPAREN
     ///        | variable
     fn factor(&mut self) -> AST {
-        match self.cur_token {
-            Some(Token::Op(op @ ArithmeticOp::Plus)) |
-            Some(Token::Op(op @ ArithmeticOp::Minus)) => {
-                self.eat(Token::Op(op));
-                AST::new(Root::UnaryOp(op)).right(self.factor())
+        match self.cur_token.clone() {
+            Some(op @ Token::OpPlus) |
+            Some(op @ Token::OpMinus) => {
+                self.eat(op.clone());
+                AST::new(Root::UnaryOp(op))
+                    .right(self.factor())
             },
             Some(Token::Integer(n)) => {
                 self.eat(Token::Integer(n));
+                AST::new(Root::Num(n as f64))
+            },
+            Some(Token::Real(n)) => {
+                self.eat(Token::Real(n));
                 AST::new(Root::Num(n))
             },
             Some(Token::LParen) => {

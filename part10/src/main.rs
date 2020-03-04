@@ -9,16 +9,21 @@ use interpreter::*;
 
 fn main() {
     let text = r#"
+    PROGRAM part10;
+    VAR
+        number     : INTEGER;
+        a, b, c, x : INTEGER;
+        y          : REAL;
     BEGIN
 
         BEGIN
             number := 2;
             a := NumBer;
-            b := 10 * a + 10 * NUMBER / 4;
+            b := 10 * a + 10 * NUMBER / 3;
             c := a - - b
         end;
 
-        x := 11;
+        x := 11.1;
     END.
     "#;
     let mut interpreter = Interpreter::new(text);

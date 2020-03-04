@@ -11,7 +11,7 @@ pub struct Interpreter {
 
 #[derive(Default)]
 pub struct Context {
-    pub variables: HashMap<String, i32>,
+    pub variables: HashMap<String, VariableValue>,
 }
 
 impl Interpreter {
@@ -23,9 +23,9 @@ impl Interpreter {
         }
     }
 
-    pub fn exec(mut self) -> (Context, Option<i32>) {
+    pub fn exec(mut self) -> (Context, VariableValue) {
         let tree = self.parser.parse();
-        //println!("{:#?}", tree);
+        // println!("{:#?}", tree);
         let mut ctx = Context::default();
         let res = tree.visit(&mut ctx);
         (ctx, res)
@@ -33,24 +33,25 @@ impl Interpreter {
 }
 
 trait NodeVisitor {
-    fn visit(&self, ctx: &mut Context) -> Option<i32>;
+    fn visit(&self, ctx: &mut Context) -> VariableValue;
 }
 
 impl NodeVisitor for AST {
-    fn visit(&self, ctx: &mut Context) -> Option<i32> {
-        match self.root {
+    fn visit(&self, ctx: &mut Context) -> VariableValue {
+        match &self.root {
             Root::Compound => compound(self, ctx),
-            Root::Assign   => assign(self, ctx),
-            Root::Var(ref id) => variable(id, self, ctx),
+            Root::Num(n) => VariableValue::Real(*n),
+            Root::VarDecl => variable_decl(self, ctx),
+            Root::VarID{name, value} => variable(self, ctx),
+            Root::Assign => assign(self, ctx),
             Root::BinOp(op)   => binary(op, self, ctx),
             Root::UnaryOp(op) => unary(op, self, ctx),
-            Root::Num(n) => Some(n),
-            Root::NoOp => None,
+            Root::NoOp => VariableValue::None,
         }
     }
 }
 
-fn compound(node: &AST, ctx: &mut Context) -> Option<i32> {
+fn compound(node: &AST, ctx: &mut Context) -> VariableValue {
     let left = node.left.as_ref().unwrap();
     let mut res = left.visit(ctx);
     if node.right.is_some() {
@@ -60,66 +61,85 @@ fn compound(node: &AST, ctx: &mut Context) -> Option<i32> {
     res
 }
 
-fn assign(node: &AST, ctx: &mut Context) -> Option<i32> {
+fn variable_decl(node: &AST, ctx: &mut Context) -> VariableValue {
     let left = node.left.as_ref().unwrap();
-    let id = match left.root {
-        Root::Var(ref id) => id.to_string(),
+    let id = match &left.root {
+        Root::VarID{name, value} => name,
+        _ => unreachable!()
+    };
+    let val = VariableValue::None;
+    ctx.variables.insert(id.to_string(), val);
+    let right = node.right.as_ref().unwrap();
+    right.visit(ctx);
+    VariableValue::None
+}
+
+fn assign(node: &AST, ctx: &mut Context) -> VariableValue {
+    let left = node.left.as_ref().unwrap();
+    let id = match &left.root {
+        Root::VarID{name, value} => name,
         _ => unreachable!()
     };
     let right = node.right.as_ref().unwrap();
-    let right = right.visit(ctx).unwrap();
-    let val = ctx.variables.entry(id).or_insert(0);
-    *val = right;
-    Some(right)
+    let right = right.visit(ctx);
+    let val = ctx.variables.entry(id.to_string())
+                           .or_insert(VariableValue::Real(0 as f64));
+    *val = right.clone();
+    right
 }
 
-fn variable<S>(id: S, node: &AST, ctx: &mut Context) -> Option<i32>
-where S: Into<String>
-{
-    let val = ctx.variables.get(&id.into()).unwrap();
-    Some(*val)
-}
-
-fn binary(op: ArithmeticOp, node: &AST, ctx: &mut Context) -> Option<i32> {
-    // Unwrap and visit
-    let left = node.left.as_ref().unwrap();
-    let right = node.right.as_ref().unwrap();
-    let left = left.visit(ctx).unwrap();
-    let right = right.visit(ctx).unwrap();
-    let res = match op {
-        ArithmeticOp::Plus  => left + right,
-        ArithmeticOp::Minus => left - right,
-        ArithmeticOp::Mul   => left * right,
-        ArithmeticOp::Div   => left / right,
+fn variable(node: &AST, ctx: &mut Context) -> VariableValue {
+    let id = match &node.root {
+        Root::VarID{name, value} => name,
+        _ => unreachable!()
     };
-    Some(res)
+    if let Some(val) = ctx.variables.get(id) {
+        val.clone()
+    }
+    else {
+        unreachable!()
+    }
 }
 
-fn unary(op: ArithmeticOp, node: &AST, ctx: &mut Context) -> Option<i32> {
+fn binary(op: &Token, node: &AST, ctx: &mut Context) -> VariableValue {
+    // Unwrap and visit
+    let left  = node.left.as_ref().unwrap();
+    let right = node.right.as_ref().unwrap();
+    let left  = left.visit(ctx);
+    let right = right.visit(ctx);
+    match op {
+        Token::OpPlus  => left + right,
+        Token::OpMinus => left - right,
+        Token::OpMul   => left * right,
+        Token::OpDiv   => left / right,
+        _ => unreachable!()
+    }
+}
+
+fn unary(op: &Token, node: &AST, ctx: &mut Context) -> VariableValue {
     assert!(node.left.is_none());
     // Unwrap and visit
     let right = node.right.as_ref().unwrap();
-    let right = right.visit(ctx).unwrap();
-    let res = match op {
-        ArithmeticOp::Plus  =>  right,
-        ArithmeticOp::Minus => -right,
+    let right = right.visit(ctx);
+    match op {
+        Token::OpPlus  =>  right,
+        Token::OpMinus => -right,
         _ => unreachable!()
-    };
-    Some(res)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn part09() {
+    fn part10() {
         let i = Interpreter::new("BEGIN END.");
-        assert_eq!(i.exec().1, None);
+        assert_eq!(i.exec().1, VariableValue::None);
         let i = Interpreter::new("BEGIN a := 5; x := 11 END.");
-        assert_eq!(i.exec().1, Some(11));
+        assert_eq!(i.exec().1, VariableValue::Real(11 as f64));
         let i = Interpreter::new("BEGIN a := 5; x := 11; END.");
-        assert_eq!(i.exec().1, None);
+        assert_eq!(i.exec().1, VariableValue::None);
         let i = Interpreter::new("BEGIN BEGIN a := 5 END; x := 11 END.");
-        assert_eq!(i.exec().1, Some(11));
+        assert_eq!(i.exec().1, VariableValue::Real(11 as f64));
     }
 }
