@@ -127,7 +127,8 @@ fn binary(op: &Token, node: &AST, ctx: &mut Context) -> VariableValue {
         Token::OpPlus  => left + right,
         Token::OpMinus => left - right,
         Token::OpMul   => left * right,
-        Token::OpDiv   => left / right,
+        Token::OpDiv   => left.as_real() / right.as_real(),
+        Token::OpIntegerDiv => left.as_integer() / right.as_integer(),
         _ => unreachable!()
     }
 }

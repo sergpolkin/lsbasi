@@ -6,10 +6,11 @@ pub enum Token {
     Integer(i32),
     Real(f64),
     // Operators
-    OpPlus,   // '+'
-    OpMinus,  // '-'
-    OpMul,    // '*'
-    OpDiv,    // '/'
+    OpPlus,       // '+'
+    OpMinus,      // '-'
+    OpMul,        // '*'
+    OpDiv,        // '/'
+    OpIntegerDiv, // 'DIV'
     // Lexems
     ID(String),
     KW(Keyword),
@@ -28,6 +29,7 @@ pub enum Token {
 pub enum Keyword {
     PROGRAM,
     VAR,
+    DIV,
     INTEREG,
     REAL,
     BEGIN,
@@ -38,7 +40,7 @@ pub enum Keyword {
 const RESERVED_KEYWORDS: &[(&str, Keyword)] = &[
     ("PROGRAM", Keyword::PROGRAM),
     ("VAR",     Keyword::VAR),
-    ("DIV",     Keyword::RESERVED),
+    ("DIV",     Keyword::DIV),
     ("INTEGER", Keyword::INTEREG),
     ("REAL",    Keyword::REAL),
     ("BEGIN",   Keyword::BEGIN),
@@ -71,6 +73,7 @@ impl fmt::Display for Token {
             Token::OpMinus => write!(f, "-"),
             Token::OpMul  => write!(f, "*"),
             Token::OpDiv  => write!(f, "/"),
+            Token::OpIntegerDiv => write!(f, "INTEGER_DIV"),
             // Lexems
             Token::ID(id) => write!(f, "ID \"{}\"", id),
             Token::KW(k)  => write!(f, "{:?}", k),

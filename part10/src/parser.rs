@@ -198,6 +198,12 @@ impl Parser {
                         .left(node)
                         .right(self.factor())
                 },
+                Some(kw @ Token::KW(Keyword::DIV)) => {
+                    self.eat(kw);
+                    AST::new(Root::BinOp(Token::OpIntegerDiv))
+                        .left(node)
+                        .right(self.factor())
+                },
                 _ => break
             };
         };

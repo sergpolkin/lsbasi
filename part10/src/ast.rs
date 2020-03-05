@@ -52,7 +52,7 @@ impl AST {
 }
 
 impl VariableValue {
-    pub fn assign(&mut self, rhs: VariableValue) -> VariableValue {
+    pub fn assign(&mut self, rhs: VariableValue) -> Self {
         *self = match (&self, rhs) {
             (Self::Intereg(_), Self::Intereg(v)) => Self::Intereg(v),
             (Self::Intereg(_), Self::Real(v)) => Self::Real(v as f64),
@@ -61,6 +61,22 @@ impl VariableValue {
             _ => unimplemented!()
         };
         *self
+    }
+
+    pub fn as_integer(&self) -> Self {
+        match self {
+            Self::Intereg(n) => Self::Intereg(*n),
+            Self::Real(n) => Self::Intereg(*n as i32),
+            _ => unimplemented!()
+        }
+    }
+
+    pub fn as_real(&self) -> Self {
+        match self {
+            Self::Intereg(n) => Self::Real(*n as f64),
+            Self::Real(n) => Self::Real(*n),
+            _ => unimplemented!()
+        }
     }
 }
 
