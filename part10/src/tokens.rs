@@ -24,7 +24,7 @@ pub enum Token {
     EOF,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Keyword {
     PROGRAM,
     VAR,
@@ -53,7 +53,7 @@ impl Token {
                 if keyword.1 == Keyword::RESERVED {
                     panic!("Reserved keyword: {}", keyword.0);
                 }
-                return Token::KW(keyword.1.clone());
+                return Token::KW(keyword.1);
             }
         }
         Token::ID(id)

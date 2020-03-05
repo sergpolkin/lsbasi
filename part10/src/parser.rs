@@ -19,12 +19,22 @@ impl Parser {
 
     fn eat(&mut self, tok: Token) {
         // println!("{}", tok);
-        match self.cur_token {
-            Some(ref cur) if (*cur == tok) => {},
+        self.cur_token = match &self.cur_token {
+            Some(ref cur) if (cur == &tok) => self.lexer.get_next_token(),
             Some(ref cur) => panic!("Expect {}, got {}", tok, cur),
             None => panic!("Expect {}, got None", tok)
         };
+    }
+
+    fn eat_type(&mut self) -> Keyword {
+        let kw = match &self.cur_token {
+            Some(Token::KW(kw))
+                if *kw == Keyword::INTEREG || *kw == Keyword::REAL => *kw,
+            Some(tok) => panic!("Expect 'type', got {}", tok),
+            None => panic!("Expect 'type', got None")
+        };
         self.cur_token = self.lexer.get_next_token();
+        kw
     }
 
     fn eat_any(&mut self) {
@@ -33,7 +43,7 @@ impl Parser {
             self.cur_token = self.lexer.get_next_token();
         }
         else {
-            panic!("Expect any token, got None");
+            panic!("Expect 'any' token, got None");
         }
     }
 
@@ -72,7 +82,8 @@ impl Parser {
     fn declarations(&mut self) -> AST {
         if self.cur_token == Some(Token::KW(Keyword::VAR)) {
             self.eat(Token::KW(Keyword::VAR));
-            self.variable_declaration()
+            let comp = AST::new(Root::Compound);
+            self.variable_declaration(comp, AST::default())
         }
         else {
             self.empty()
@@ -80,23 +91,29 @@ impl Parser {
     }
 
     /// variable_declaration : ID (COMMA ID)* COLON type_spec
-    fn variable_declaration(&mut self) -> AST {
-        let node = AST::new(Root::VarDecl)
-            .left(self.variable());
+    fn variable_declaration(&mut self, comp: AST, decl: AST) -> AST {
+        // eat variable ID, wrap in VarDecl
+        let mut node = AST::new(Root::VarDecl)
+            .left(self.variable())
+            .right(decl);
         match self.cur_token {
             Some(Token::COMMA) => {
                 self.eat(Token::COMMA);
-                node.right(self.variable_declaration())
+                self.variable_declaration(comp, node)
             },
             Some(Token::COLON) => {
                 self.eat(Token::COLON);
-                self.eat_any(); // eat type_spec
+                let typ = self.eat_type();
+                set_type(&mut node, typ);
                 self.eat(Token::SEMI);
+                let comp = comp.left(node);
                 if let Some(Token::ID(ref _id)) = self.cur_token {
-                    node.right(self.variable_declaration())
+                    let new_comp = AST::new(Root::Compound)
+                        .right(comp);
+                    self.variable_declaration(new_comp, AST::default())
                 }
                 else {
-                    node.right(self.empty())
+                    comp
                 }
             },
             _ => panic!("Error at variable_declaration: {}", self.lexer.pos)
@@ -202,11 +219,13 @@ impl Parser {
             },
             Some(Token::Integer(n)) => {
                 self.eat(Token::Integer(n));
-                AST::new(Root::Num(n as f64))
+                let val = VariableValue::Intereg(n);
+                AST::new(Root::Num(val))
             },
             Some(Token::Real(n)) => {
                 self.eat(Token::Real(n));
-                AST::new(Root::Num(n))
+                let val = VariableValue::Real(n);
+                AST::new(Root::Num(val))
             },
             Some(Token::LParen) => {
                 self.eat(Token::LParen);
@@ -231,5 +250,27 @@ impl Parser {
         else {
             println!("{} [_] {}", lvl, self.lexer.rest());
         }
+    }
+}
+
+// Some helper functions
+
+/// Set VarID type in VarDecl chain
+fn set_type(decl: &mut AST, typ: Keyword)
+{
+    match decl.root {
+        Root::VarDecl => {
+            let id = decl.left.as_deref_mut().unwrap();
+            if let Root::VarID{ref name, ref mut value} = id.root {
+                *value = VariableValue::from(typ);
+            }
+            else {
+                unreachable!();
+            }
+            let decl = decl.right.as_deref_mut().unwrap();
+            set_type(decl, typ)
+        },
+        Root::NoOp => {},
+        _ => unreachable!()
     }
 }

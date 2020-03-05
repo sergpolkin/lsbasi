@@ -3,10 +3,10 @@ use crate::lexer::*;
 
 /// Tree implementation
 /// [Of Boxes and Trees - Smart Pointers in Rust](https://endler.dev/2017/boxes-and-trees/)
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Root {
     Compound,
-    Num(f64),
+    Num(VariableValue),
     VarDecl,
     VarID {
         name: String,
@@ -23,7 +23,7 @@ impl Default for Root {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum VariableValue {
     Intereg(i32),
     Real(f64),
@@ -51,6 +51,31 @@ impl AST {
     }
 }
 
+impl VariableValue {
+    pub fn assign(&mut self, rhs: VariableValue) -> VariableValue {
+        *self = match (&self, rhs) {
+            (Self::Intereg(_), Self::Intereg(v)) => Self::Intereg(v),
+            (Self::Intereg(_), Self::Real(v)) => Self::Real(v as f64),
+            (Self::Real(_), Self::Intereg(v)) => Self::Real(v as f64),
+            (Self::Real(_), Self::Real(v)) => Self::Real(v),
+            _ => unimplemented!()
+        };
+        *self
+    }
+}
+
+use std::convert::From;
+
+impl From<Keyword> for VariableValue {
+    fn from(kw: Keyword) -> Self {
+        match kw {
+            Keyword::INTEREG => VariableValue::Intereg(0 as i32),
+            Keyword::REAL => VariableValue::Real(0 as f64),
+            _ => unimplemented!()
+        }
+    }
+}
+
 use std::ops::{Neg, Add, Sub, Mul, Div};
 
 impl Neg for VariableValue
@@ -70,8 +95,8 @@ impl Add for VariableValue {
     fn add(self, rhs: Self) -> Self {
         match (self, rhs) {
             (Self::Intereg(a), Self::Intereg(b)) => Self::Intereg(a+b),
-            (Self::Real(a), Self::Intereg(b)) => Self::Real(a+(b as f64)),
             (Self::Intereg(a), Self::Real(b)) => Self::Real((a as f64)+b),
+            (Self::Real(a), Self::Intereg(b)) => Self::Real(a+(b as f64)),
             (Self::Real(a), Self::Real(b)) => Self::Real(a+b),
             _ => unimplemented!()
         }
@@ -83,8 +108,8 @@ impl Sub for VariableValue {
     fn sub(self, rhs: Self) -> Self {
         match (self, rhs) {
             (Self::Intereg(a), Self::Intereg(b)) => Self::Intereg(a-b),
-            (Self::Real(a), Self::Intereg(b)) => Self::Real(a-(b as f64)),
             (Self::Intereg(a), Self::Real(b)) => Self::Real((a as f64)-b),
+            (Self::Real(a), Self::Intereg(b)) => Self::Real(a-(b as f64)),
             (Self::Real(a), Self::Real(b)) => Self::Real(a-b),
             _ => unimplemented!()
         }
@@ -96,8 +121,8 @@ impl Mul for VariableValue {
     fn mul(self, rhs: Self) -> Self {
         match (self, rhs) {
             (Self::Intereg(a), Self::Intereg(b)) => Self::Intereg(a*b),
-            (Self::Real(a), Self::Intereg(b)) => Self::Real(a*(b as f64)),
             (Self::Intereg(a), Self::Real(b)) => Self::Real((a as f64)*b),
+            (Self::Real(a), Self::Intereg(b)) => Self::Real(a*(b as f64)),
             (Self::Real(a), Self::Real(b)) => Self::Real(a*b),
             _ => unimplemented!()
         }
@@ -109,8 +134,8 @@ impl Div for VariableValue {
     fn div(self, rhs: Self) -> Self {
         match (self, rhs) {
             (Self::Intereg(a), Self::Intereg(b)) => Self::Intereg(a/b),
-            (Self::Real(a), Self::Intereg(b)) => Self::Real(a/(b as f64)),
             (Self::Intereg(a), Self::Real(b)) => Self::Real((a as f64)/b),
+            (Self::Real(a), Self::Intereg(b)) => Self::Real(a/(b as f64)),
             (Self::Real(a), Self::Real(b)) => Self::Real(a/b),
             _ => unimplemented!()
         }

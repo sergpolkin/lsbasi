@@ -14,6 +14,18 @@ pub struct Context {
     pub variables: HashMap<String, VariableValue>,
 }
 
+impl Context {
+    pub fn get_var<S: Into<String>>(&self, name: S) -> Option<VariableValue> {
+        let key = name.into().to_ascii_uppercase();
+        if self.variables.contains_key(&key) {
+            Some(*self.variables.get(&key).unwrap())
+        }
+        else {
+            None
+        }
+    }
+}
+
 impl Interpreter {
     pub fn new<S: Into<String>>(text: S) -> Interpreter {
         let text = text.into();
@@ -40,7 +52,7 @@ impl NodeVisitor for AST {
     fn visit(&self, ctx: &mut Context) -> VariableValue {
         match &self.root {
             Root::Compound => compound(self, ctx),
-            Root::Num(n) => VariableValue::Real(*n),
+            Root::Num(n) => *n,
             Root::VarDecl => variable_decl(self, ctx),
             Root::VarID{name, value} => variable(self, ctx),
             Root::Assign => assign(self, ctx),
@@ -63,12 +75,12 @@ fn compound(node: &AST, ctx: &mut Context) -> VariableValue {
 
 fn variable_decl(node: &AST, ctx: &mut Context) -> VariableValue {
     let left = node.left.as_ref().unwrap();
-    let id = match &left.root {
-        Root::VarID{name, value} => name,
+    match &left.root {
+        Root::VarID{name, value} => {
+            ctx.variables.insert(name.to_string(), *value);
+        },
         _ => unreachable!()
     };
-    let val = VariableValue::None;
-    ctx.variables.insert(id.to_string(), val);
     let right = node.right.as_ref().unwrap();
     right.visit(ctx);
     VariableValue::None
@@ -82,10 +94,14 @@ fn assign(node: &AST, ctx: &mut Context) -> VariableValue {
     };
     let right = node.right.as_ref().unwrap();
     let right = right.visit(ctx);
-    let val = ctx.variables.entry(id.to_string())
-                           .or_insert(VariableValue::Real(0 as f64));
-    *val = right.clone();
-    right
+    if ctx.variables.contains_key(id) {
+        let val = ctx.variables.get_mut(id).unwrap();
+        val.assign(right)
+    }
+    else {
+        ctx.variables.insert(id.to_string(), right);
+        *ctx.variables.get(id).unwrap()
+    }
 }
 
 fn variable(node: &AST, ctx: &mut Context) -> VariableValue {
@@ -94,7 +110,7 @@ fn variable(node: &AST, ctx: &mut Context) -> VariableValue {
         _ => unreachable!()
     };
     if let Some(val) = ctx.variables.get(id) {
-        val.clone()
+        *val
     }
     else {
         unreachable!()
@@ -133,13 +149,28 @@ mod tests {
     use super::*;
     #[test]
     fn part10() {
-        let i = Interpreter::new("BEGIN END.");
-        assert_eq!(i.exec().1, VariableValue::None);
-        let i = Interpreter::new("BEGIN a := 5; x := 11 END.");
-        assert_eq!(i.exec().1, VariableValue::Real(11 as f64));
-        let i = Interpreter::new("BEGIN a := 5; x := 11; END.");
-        assert_eq!(i.exec().1, VariableValue::None);
-        let i = Interpreter::new("BEGIN BEGIN a := 5 END; x := 11 END.");
-        assert_eq!(i.exec().1, VariableValue::Real(11 as f64));
+        {
+            let (ctx, res) = Interpreter::new("BEGIN END.")
+                .exec();
+            assert_eq!(res, VariableValue::None);
+        }
+        {
+            let (ctx, res) = Interpreter::new("BEGIN a := 5; x := 11. END.")
+                .exec();
+            assert_eq!(ctx.get_var("a"), Some(VariableValue::Intereg(5)));
+            assert_eq!(ctx.get_var("X"), Some(VariableValue::Real(11.0)));
+            assert_eq!(ctx.get_var("z"), None);
+            assert_eq!(res, VariableValue::Real(11.0));
+        }
+        {
+            let (ctx, res) = Interpreter::new("BEGIN a := 5; x := 11; END.")
+                .exec();
+            assert_eq!(res, VariableValue::None);
+        }
+        {
+            let (ctx, res) = Interpreter::new("BEGIN BEGIN a := 5 END; x := 11 END.")
+                .exec();
+            assert_eq!(res, VariableValue::Intereg(11));
+        }
     }
 }
