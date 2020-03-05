@@ -10,11 +10,11 @@ use interpreter::*;
 fn main() {
     let text = r#"
     PROGRAM part10;
-    VAR
+    VAR { some variables }
         number     : INTEGER;
         a, b, c, x : INTEGER;
         y          : REAL;
-    BEGIN
+    BEGIN { part10 }
 
         BEGIN
             number := 2;
@@ -24,7 +24,7 @@ fn main() {
         end;
 
         x := 11.1;
-    END.
+    END. { part10 }
     "#;
     let mut interpreter = Interpreter::new(text);
     let (ctx, res) = interpreter.exec();

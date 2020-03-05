@@ -94,6 +94,16 @@ impl Lexer {
                 continue;
             }
 
+            if c == '{' {
+                while let Some(c) = self.get_char() {
+                    self.pos += 1;
+                    if c == '}' {
+                        break;
+                    }
+                };
+                continue;
+            }
+
             if c.is_alphabetic() {
                 let id = self.parse_id();
                 return Some(Token::get_token(&id));
