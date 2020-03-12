@@ -50,6 +50,7 @@ impl NodeVisitor for Interpreter {
     type Result = VariableValue;
     fn visit(&mut self, node: &AST) -> VariableValue {
         match &node.root {
+            Root::Program{name} => self.program(node),
             Root::Compound => self.compound(node),
             Root::Num(n) => *n,
             Root::VarDecl => VariableValue::None,
@@ -65,6 +66,10 @@ impl NodeVisitor for Interpreter {
 }
 
 impl Interpreter {
+    fn program(&mut self, node: &AST) -> VariableValue {
+        VariableValue::None
+    }
+
     fn compound(&mut self, node: &AST) -> VariableValue {
         let left = node.left.as_ref().unwrap();
         let mut res = self.visit(left);

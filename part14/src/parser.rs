@@ -59,14 +59,19 @@ impl Parser {
 
     /// program : PROGRAM variable SEMI block DOT
     fn program(&mut self) -> AST {
-        if self.cur_token == Some(Token::KW(Keyword::PROGRAM)) {
+        let prog = if self.cur_token == Some(Token::KW(Keyword::PROGRAM)) {
             self.eat(Token::KW(Keyword::PROGRAM));
-            let _prog_name = self.variable();
+            let name = self.variable().get_name();
             self.eat(Token::SEMI);
+            AST::new(Root::Program{name})
+                .left(self.block())
         }
-        let block_node = self.block();
+        else {
+            AST::new(Root::Program{name: "noname".into()})
+                .left(self.block())
+        };
         self.eat(Token::DOT);
-        block_node
+        prog
     }
 
     /// block : declarations compound_statement
@@ -135,7 +140,7 @@ impl Parser {
     fn procedure_declarations(&mut self, comp: AST) -> AST {
         if self.cur_token == Some(Token::KW(Keyword::PROCEDURE)) {
             self.eat(Token::KW(Keyword::PROCEDURE));
-            let proc_name = get_name(&self.variable());
+            let proc_name = self.variable().get_name();
             let params = self.formal_parameter_list();
             self.eat(Token::SEMI);
             let block = self.block();
@@ -351,13 +356,6 @@ fn set_type(decl: &mut AST, typ: Keyword)
         },
         Root::Compound => {},
         Root::NoOp => {},
-        _ => unreachable!()
-    }
-}
-
-fn get_name(decl: &AST) -> String {
-    match &decl.root {
-        Root::VarID{name,value} => { name.to_string() },
         _ => unreachable!()
     }
 }

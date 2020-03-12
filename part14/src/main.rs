@@ -17,8 +17,12 @@ fn main() {
     var c : integer;
         d : integer;
     procedure foo1; begin end;
-    procedure foo2(ii:integer); begin end;
-    procedure foo3(iii, jjj:integer; kkk:real); begin end;
+    procedure foo2(ii:integer); begin ii:=42 end;
+    procedure foo3(iii, jjj:integer; kkk:real);
+        var x : real;
+        begin
+            {y := x + iii;}
+        end;
     begin
         x := y;
     end.

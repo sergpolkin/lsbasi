@@ -5,6 +5,9 @@ use crate::lexer::*;
 pub enum Root {
     Compound,
     Num(VariableValue),
+    Program {
+        name: String,
+    },
     VarDecl,
     VarID {
         name: String,
@@ -59,6 +62,15 @@ impl AST {
     pub fn right(mut self, leaf: AST) -> Self {
         self.right = Some(Box::new(leaf));
         self
+    }
+
+    pub fn get_name(&self) -> String {
+        match &self.root {
+            Root::Program{name} => name.to_string(),
+            Root::VarID{name,value} => name.to_string(),
+            Root::ProcedureDecl{name} => name.to_string(),
+            _ => unimplemented!(),
+        }
     }
 }
 
